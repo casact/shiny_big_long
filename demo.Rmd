@@ -1,0 +1,146 @@
+---
+title: The Big Long
+---
+
+This package will assist in the simulation of insurance pricing and the renewal behavior of policyholders.
+
+```{r }
+library(tidyverse)
+
+source('game.R')
+```
+
+We start by creating a set of customer segments. Each segment will define the expected comparison/lapse propensity and the frequency and severity of claims.
+
+```{r }
+num_rounds <- 10
+num_segments <- 4
+
+set.seed(1234)
+tbl_segment <- gm_segments_create(num_segments)
+```
+
+```{r echo = FALSE}
+tbl_segment %>% 
+  knitr::kable()
+```
+
+We use a fixed universe of policyholders who are required to purchase insurance througout the simulation. No policyholders enter or leave the universe. Each policyholder has their own set of parameters for comparison, frequency and severity. Those parameters remain fixed throughout the simulation.
+
+```{r }
+num_policyholders <- 5e3
+
+tbl_policyholder <- tbl_segment %>% 
+  gm_policyholders_create(num_policyholders)
+```
+
+```{r }
+tbl_policyholder %>% 
+  ggplot(aes(compare, fill = segment)) +
+  geom_density() + 
+  facet_wrap(~ segment)
+```
+
+```{r}
+tbl_policyholder %>% 
+  ggplot(aes(expected_cost, fill = segment)) +
+  geom_histogram() + 
+  scale_x_log10() +
+  facet_wrap(~ segment)
+```
+
+## Players
+
+Each player represents an insurance company.
+
+```{r }
+tbl_player <- gm_dummy_players()
+```
+
+```{r echo = FALSE}
+tbl_player %>% 
+  knitr::kable()
+```
+
+### Player pricing
+
+Players will make decisions about rate. Players begin with perfect knowledge about the risk characteristics of policyholder segments. That is, they know expected value of losses are for the typical policyholder by segment. Of course, actual policyholder experience will deviate from this because 1) they will have parameters that differ from the segment and 2) process variance for their specific set of parameters.
+
+Players may opt to begin by offering premiums which are a bit more or a bit less than expected. This will mean that they may opt to write more or less of the market.
+
+Player pricing may be automated. The default algorithm is fairly basic. The player will compute a historical cost based on the last X years of experience. The rate change is then simply the ratio of historical costs divided by historical premium. This ratio is attenuated. Finally, a cap is applied to the change.
+
+Ex.
+
+$$\alpha = 0.7$$
+$$Loss = 1,100$$
+$$Premium = 1,000$$
+$$\Delta=(1-\alpha)*\frac{L}{P}=2.5\%$$
+
+```{r }
+tbl_player_experience <- tbl_player %>% 
+  gm_player_experience_create(tbl_segment, num_rounds)
+```
+
+In a live setting, players are free to apply whichever rate changes they wish. They will be provided with actuarial summaries of portfolio characteristics.
+
+Data convention: in the player experience table, the rate changes are meant to be applied to premium offered for the following round. For example, a player's rate change for segment A, round 2 will be the renewal premium written in round 3. The premium offered for round 3 
+
+## Rounds
+
+The game is structured as a set of rounds, each of which is analogous to a policy period. 
+
+### Round 1
+
+For round 1, policyholders will bind with whichever player is cheapest. At the opening of the game, all policies are new.
+
+```{r }
+tbl_round <- tbl_policyholder %>% 
+  gm_rounds_create(tbl_player_experience, num_rounds)
+```
+
+```{r}
+tbl_round %>% 
+  filter(round == 1) %>% 
+  group_by(written_by) %>% 
+  summarise(
+    expected_cost = sum(expected_cost)
+  ) %>% 
+  ggplot(aes(written_by, expected_cost)) + 
+  geom_bar(stat = 'identity')
+
+tbl_round %>% 
+  gm_rounds_summarise() %>% 
+  filter(round == 1) %>% 
+  ggplot(aes(written_by, total_income, fill = segment)) + 
+  geom_bar(stat = 'identity', position = 'dodge')
+
+tbl_round %>% 
+  filter(round == 1) %>% 
+  group_by(written_by) %>% 
+  summarise(
+    total_income = sum(income)
+  ) %>% 
+  ggplot(aes(written_by, total_income)) + 
+  geom_bar(stat = 'identity')
+
+tbl_round %>% 
+  filter(round == 1) %>% 
+  group_by(segment) %>% 
+  summarise(
+    total_income = sum(income)
+  ) %>% 
+  ggplot(aes(segment, total_income)) + 
+  geom_bar(stat = 'identity')
+```
+
+### Round 2
+
+```{r}
+tbl_player_experience <- tbl_player_experience %>% 
+  gm_player_experience_update(tbl_round)
+
+mojo <- tbl_round %>% 
+  gm_rounds_update(tbl_player_experience)
+```
+
