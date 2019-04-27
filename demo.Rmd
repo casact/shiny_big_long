@@ -96,10 +96,16 @@ For round 1, policyholders will bind with whichever player is cheapest. At the o
 
 ```{r }
 tbl_round <- tbl_policyholder %>% 
-  gm_rounds_create(tbl_player_experience, num_rounds)
+  gm_rounds_create(tbl_player_experience, num_rounds) %>% 
+  gm_rounds_update(tbl_player_experience)
 ```
 
-```{r}
+```{r eval=FALSE}
+tbl_round %>% 
+  ggplot(aes(compare, compared)) + 
+  geom_jitter(width = 0) +
+  facet_wrap(~ round)
+
 tbl_round %>% 
   filter(round == 1) %>% 
   group_by(written_by) %>% 
@@ -109,11 +115,11 @@ tbl_round %>%
   ggplot(aes(written_by, expected_cost)) + 
   geom_bar(stat = 'identity')
 
-tbl_round %>% 
-  gm_rounds_summarise() %>% 
-  filter(round == 1) %>% 
-  ggplot(aes(written_by, total_income, fill = segment)) + 
-  geom_bar(stat = 'identity', position = 'dodge')
+# tbl_round %>% 
+#   gm_rounds_summarise() %>% 
+#   filter(round == 1) %>% 
+#   ggplot(aes(written_by, total_income, fill = segment)) + 
+#   geom_bar(stat = 'identity', position = 'dodge')
 
 tbl_round %>% 
   filter(round == 1) %>% 
@@ -140,7 +146,40 @@ tbl_round %>%
 tbl_player_experience <- tbl_player_experience %>% 
   gm_player_experience_update(tbl_round)
 
-mojo <- tbl_round %>% 
+tbl_round <- tbl_round %>% 
   gm_rounds_update(tbl_player_experience)
+```
+
+```{r}
+tbl_round %>% 
+  filter(round <= 2) %>% 
+  group_by(written_by) %>% 
+  summarise(
+    total_income = sum(income)
+  ) %>% 
+  ggplot(aes(written_by, total_income)) + 
+  geom_bar(stat = 'identity')
+```
+
+### Round 3
+
+```{r}
+tbl_player_experience <- tbl_player_experience %>% 
+  gm_player_experience_update(tbl_round)
+
+tbl_round <- tbl_round %>% 
+  gm_rounds_update(tbl_player_experience)
+```
+
+```{r}
+tbl_round %>% 
+  filter(round <= 3) %>% 
+  group_by(written_by, round) %>% 
+  summarise(
+    total_income = sum(written_premium)
+  ) %>% 
+  ggplot(aes(written_by, total_income)) + 
+  geom_bar(stat = 'identity') + 
+  facet_wrap(~ round)
 ```
 
