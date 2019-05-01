@@ -10,11 +10,11 @@ source('db.R')
 #' This does obliterate the current backup though, so keep that in mind if we need to retain backups
 #' Alternatively, we could just write tables and overwrite and not care about backups. Saves a step.
 
-if (file.exists('./CAS_LTPAWP.sqlite')) 
-  file.rename('./CAS_LTPAWP.sqlite', './CAS_LTPAWP.sqlite.bak')
+if (file.exists('./big_long.sqlite')) 
+  file.rename('./big_long.sqlite', './big_long.sqlite.bak')
 
 # This creates the data base
-con <- dbConnect(SQLite(),"CAS_LTPAWP.sqlite") 
+con <- dbConnect(SQLite(),"big_long.sqlite") 
 
 dbDisconnect(con)
 rm(con)
