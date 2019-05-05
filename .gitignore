@@ -27,3 +27,4 @@ rsconnect/
 .Rproj.user
 *.sqlite
 *.sqlite.bak
+*.html
