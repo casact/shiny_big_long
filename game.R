@@ -19,10 +19,13 @@ gm_segments_create <- function(num_segments, lst_parms) {
         segment = LETTERS[seq_len(num_segments)]
       , compare_alpha = sample(seq_len(10), size = num_segments, replace = TRUE)
       , compare_beta = compare_alpha * runif(num_segments, 1.5, 3)
+      , compare_trend = 0
       , freq_shape = runif(num_segments, 0.5, 1.5)
       , freq_scale = 1:10 %>% sample(num_segments, replace = TRUE)
+      , freq_trend = 0
       , sev_shape = runif(num_segments, 0.8, 1.2)
       , sev_scale = 10e3
+      , sev_trend = 0
     ) %>% 
     mutate(
         expected_compare = compare_alpha / compare_beta
