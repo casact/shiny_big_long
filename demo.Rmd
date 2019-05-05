@@ -1,5 +1,6 @@
 ---
 title: The Big Long
+self_contained: true
 ---
 
 This package will assist in the simulation of insurance pricing and the renewal behavior of policyholders.
@@ -181,5 +182,23 @@ tbl_round %>%
   ggplot(aes(written_by, total_income)) + 
   geom_bar(stat = 'identity') + 
   facet_wrap(~ round)
+```
+
+## Database connection
+
+Connect
+
+```{r}
+source('db.R')
+library(RSQLite)
+
+db_con <- dbConnect(SQLite(), 'big_long.sqlite')
+```
+
+Provision new
+
+
+```{r}
+mojo <- db_con %>% db_create_player("Jane Actuary")
 ```
 
