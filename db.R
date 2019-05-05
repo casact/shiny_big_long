@@ -1,8 +1,35 @@
-db_connect <- function(db_source = "big_long.sqlite") {
-  dbConnect(SQLite(), db_source) 
-}
+library(DBI)
 
-db_create_segment <- function(db_con) {
+db_provision <- function(db_con) {
+  
+  str_sql <- read_lines('provision_db.sql') %>% paste0(collapse = "")
+  dbExecute(db_con, str_sql)
+  
+}
+  
+db_insert_segment <- function(
+    db_con
+  , compare_alpha
+  , compare_beta
+  , freq_shape
+  , freq_scale
+  , sev_shape
+  , sev_scale
+  ) {
+
+  dbWriteTable(
+      conn = db_con
+    , name = 'tbl_player'
+    , value = tibble(
+          compare_alpha
+        , compare_beta
+        , freq_shape
+        , freq_scale
+        , sev_shape
+        , sev_scale
+      )
+    , append = TRUE
+  )
   
 }
 
