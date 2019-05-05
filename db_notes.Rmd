@@ -1,0 +1,137 @@
+---
+---
+
+# DB notes
+
+Following are some rough notes about provisiong the database. This is prompted by out wish to enforce some basic referential integrity constraints, chief among them unique values for segment and player names. Because players will be accessing the database concurrently, we would like to use the database itself to enforce this. The alternative is to read data in from the DB, check for uniqueness and then write if the operation is safe. This would constitute a replication of programming logic which the database ostensibly already provides.
+
+The issue which I run into is the fact that I cannot succesfully run table construction queries using DBI/RSQLite. Observe the examples below.
+
+# Run a full provision SQL
+
+In this attempt, we read in a SQL script which will provision the entire database with appropriate constraints. Note that we must collapse the text into a single vector to deal with newline characters. The operation does not create any tables.
+
+In all of the examples, note that I am using a transaction, which feels like overkill for SQLite. I'm not sure that it makes any difference. I had tried it without commits and did not see any results. I had theorized that perhaps the transaction was sent to the DB, but was never committed. Nope.
+
+```{r }
+library(tidyverse)
+library(DBI)
+library(RSQLite)
+
+db_source = "big_long.sqlite"
+
+# Fist attempt
+db_con <- dbConnect(SQLite(), db_source) 
+str_sql <- read_lines('provision_db.sql') %>% paste0(collapse = "")
+dbBegin(db_con)
+dbExecute(db_con, str_sql)
+dbCommit(db_con)
+dbListTables(db_con)
+dbDisconnect(db_con)
+
+db_con <- dbConnect(SQLite(), db_source) 
+dbListTables(db_con)
+```
+
+Perhaps the issue is that we are doing too much at once? Let's repeat that by only trying to address one table.
+
+```{r }
+db_con <- dbConnect(SQLite(), db_source) 
+dbBegin(db_con)
+dbExecute(
+  db_con
+  , "DROP TABLE IF EXISTS tbl_segment;
+
+CREATE TABLE tbl_segment(
+    segment TEXT NOT NULL PRIMARY KEY
+  , compare_alpha REAL
+  , compare_beta REAL
+  , freq_shape REAL
+  , freq_scale REAL
+  , sev_shape REAL
+  , sev_scale REAL
+);"
+)
+dbCommit(db_con)
+dbListTables(db_con)
+dbDisconnect(db_con)
+```
+
+Perhaps it's because we have two statements which must be executed one at a time?
+
+```{r}
+db_con <- dbConnect(SQLite(), db_source) 
+dbBegin(db_con)
+dbExecute(
+  db_con
+  , "DROP TABLE IF EXISTS tbl_segment;"
+)
+dbCommit(db_con)
+
+dbBegin(db_con)
+dbExecute(
+    db_con
+  , "CREATE TABLE tbl_segment(
+      segment TEXT NOT NULL PRIMARY KEY
+    , compare_alpha REAL
+    , compare_beta REAL
+    , freq_shape REAL
+    , freq_scale REAL
+    , sev_shape REAL
+    , sev_scale REAL
+  );"
+)
+dbCommit(db_con)
+dbListTables(db_con)
+dbDisconnect(db_con)
+```
+
+Hmm, that actually worked. Let's try writing some data to the table.
+
+```{r}
+source('game.R')
+set.seed(1234)
+tbl_segment <- gm_segments_create(4)
+db_con <- dbConnect(SQLite(), db_source) 
+dbWriteTable(db_con, 'tbl_segment', tbl_segment, overwrite = TRUE)
+dbDisconnect(db_con)
+```
+
+And now let's read it back.
+
+```{r}
+db_con <- dbConnect(SQLite(), db_source) 
+dbReadTable(db_con, 'tbl_segment')
+dbDisconnect(db_con)
+```
+
+Awesome!
+
+Can we see what happens when we violate a key constraint?
+
+```{r }
+db_con <- dbConnect(SQLite(), db_source) 
+
+dbExecute(
+  db_con
+  , "UPDATE tbl_segment SET segment = 'A' WHERE segment = 'B'
+  "
+)
+dbDisconnect(db_con)
+```
+
+No es bueno. It looks like the key constraints are not respected.
+
+I'm going to run the SQL from within my SQLite browser and then try the above again. This time, I'll ensure that the segment value is the same for every record. I shouldn't be allowed to save this.
+
+```{r }
+set.seed(1234)
+tbl_segment <- gm_segments_create(4)
+tbl_segment$segment <- 'A'
+db_con <- dbConnect(SQLite(), db_source) 
+dbWriteTable(db_con, 'tbl_segment', tbl_segment, overwrite = TRUE)
+dbReadTable(db_con, 'tbl_segment')
+dbDisconnect(db_con)
+```
+
+Fcuk. OK, so integrity constraints are not respected. This is a problem with the players' names. We can address that on the fly. The admin will not start the game until players have unique names. If there are conflicts, we will have to resolve them before the game can commence.
