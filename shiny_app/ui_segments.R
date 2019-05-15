@@ -1,5 +1,5 @@
 segment_names <- reactiveVal(NULL)
-tbl_segment <- reactiveVal(tibble())
+# tbl_segment <- reactiveVal(tibble())
 
 mnu_segments <- menuItem("Segments", tabName = "tab_segments")
 
@@ -41,13 +41,13 @@ expr_segments <- quote({
   
   tbl_selected_segment <- reactive({
     
-    tbl_selected_segment <- tbl_segment() %>% 
+    tbl_segment %>% 
       filter(name == input$select_segment)
     
   })
   
   output$tbl_segments <- renderTable({
-    tbl_segment()
+    tbl_segment
   })
   
   output$plt_compare <- renderPlot({

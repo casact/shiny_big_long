@@ -1,15 +1,13 @@
 #=======================================
 # GLOBAL VALS
-num_rounds <- reactiveVal(0)
+sqlite_filename <- 'big_long.sqlite'
 game_state <- reactiveVal('before')
 is_admin <- reactiveVal(TRUE)
 db_con <- reactiveVal(NULL)
 current_round <- reactiveVal(0)
-player_names <- reactiveVal(NULL)
 
 tbl_policyholders <- reactiveVal(tibble())
 tbl_policyholder_experience <- reactiveVal(tibble())
-tbl_player <- reactiveVal(tibble())
 tbl_player_experience <- reactiveVal(tibble())
 
 #=======================================

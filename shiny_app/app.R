@@ -3,6 +3,8 @@ library(shinydashboard)
 library(DBI)
 library(RSQLite)
 
+source('app_startup.R')
+
 source('ui_player_setup.R')
 source('ui_profit_loss.R')
 source('ui_rate_change.R')
@@ -57,14 +59,15 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  db_con(dbConnect(SQLite(), 'big_long.sqlite'))
-  
+  db_con(dbConnect(SQLite(), sqlite_filename))
+
   observe({
     
     segment_names(fetch_db_column(db_con(), 'tbl_segment', 'name'))
     player_names(fetch_db_column(db_con(), 'tbl_player', 'name'))
-    tbl_segment(fetch_db_table(db_con(), 'tbl_segment'))
-  
+    # tbl_segment(fetch_db_table(db_con(), 'tbl_segment'))
+    num_players(fetch_db_column(db_con(), 'tbl_player', 'name') %>% length())
+    
   })
   
   eval(expr_player_setup)
