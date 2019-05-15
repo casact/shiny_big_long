@@ -1,9 +1,15 @@
+tbl_player <- reactiveVal(tibble())
+player_name <- reactiveVal(NA_character_)
+num_players <- reactiveVal(0)
+player_names <- reactiveVal(NULL)
+
 #=======================================
 # UI ITEMS
 mnu_player_setup <- menuItem("Player setup", tabName = "tab_player_setup")
 
 tab_player_setup <- tabItem(
     "tab_player_setup"
+  , textOutput("txt_num_players")
   , conditionalPanel(
         condition = paste0("output.player_created == false")
         , fluidRow(
@@ -16,6 +22,7 @@ tab_player_setup <- tabItem(
   , conditionalPanel(
         condition = paste0("output.player_created == true")
       , h1(textOutput("txt_welcome_message"))
+      , tableOutput("tbl_player")
     )
 )
 
@@ -47,22 +54,43 @@ expr_player_setup <- quote({
       showNotification("That player name already exists.", type = 'error')
       return()
     }
+
+    db_con <- dbConnect(SQLite(), sqlite_filename)
     
     dbWriteTable(
-        db_con()
+        db_con
       , 'tbl_player'
       , tibble(
           name = input$txt_player_name
           , bot = FALSE
           )
       , append = TRUE)
+
+    dbDisconnect(db_con)
     
+    num_players(num_players() + 1)
+    
+    player_name(input$txt_player_name)
     player_created(TRUE)
     
   })
   
   output$txt_welcome_message <- renderText(
-    paste0("Welcome aboard ", input$txt_player_name, "!")
+    paste0("Welcome aboard ", player_name(), "!")
   )
+  
+  output$tbl_player <- renderTable({
+    invalidateLater(2000)
+    
+    dbReadTable(db_con(), 'tbl_player')
+  })
+  
+  output$txt_num_players <- renderText({
+    if (num_players() == 1) {
+      "There is 1 player in this game."
+    } else {
+      paste0("There are ", num_players(), " players in this game.")
+    }
+  })
   
 })
