@@ -37,7 +37,7 @@ DROP TABLE IF EXISTS tbl_player;
 CREATE TABLE tbl_player(
     name TEXT NOT NULL PRIMARY KEY
   , bot INTEGER NOT NULL
-  , default_rate_change REAL NOT NULL
+  , default_rate_change REAL
   , hist_include REAL
   , attenuation REAL
   , cap_increase REAL
