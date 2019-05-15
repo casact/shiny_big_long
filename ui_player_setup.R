@@ -9,10 +9,6 @@ tab_player_setup <- tabItem(
         , fluidRow(
             column(12
             , textInput("txt_player_name", "Player name")
-            , p("The startup value is used to set the initial prices for the simulation. The expected costs for each segment are known.
-                By charging a price either higher or lower than expected cost, you may increase either expected revenue or expected
-                profit.")
-            , numericInput("startup", "Startup price difference", 0, min = -.5, max = .5, step = .005)
             , actionButton("btn_create_player", "Create player")
           )
         )
@@ -57,7 +53,6 @@ expr_player_setup <- quote({
       , 'tbl_player'
       , tibble(
           name = input$txt_player_name
-          , startup = input$startup
           , bot = FALSE
           )
       , append = TRUE)
