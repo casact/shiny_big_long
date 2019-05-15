@@ -1,7 +1,6 @@
 #' gm_segments_create
 #' 
 #' @param num_segments Integer indicating the number of segments to be created
-#' @param lst_parms Not used yet
 #' 
 #' @return Data frame
 #' 
@@ -11,9 +10,7 @@
 #' if 1) it is cheaper, and 2) there is a randomized element.
 #' 
 #' 
-gm_segments_create <- function(num_segments, lst_parms) {
-  
-  lst_parms <- NULL
+gm_segments_create <- function(num_segments) {
   
   tibble(
         segment = LETTERS[seq_len(num_segments)]
@@ -28,7 +25,7 @@ gm_segments_create <- function(num_segments, lst_parms) {
       , sev_trend = 0
     ) %>% 
     mutate(
-        expected_compare = compare_alpha / compare_beta
+      expected_compare = compare_alpha / (compare_alpha + compare_beta)
       , expected_freq = freq_shape * freq_scale
       , expected_sev = sev_shape * sev_scale
       , expected_cost = expected_freq * expected_sev
