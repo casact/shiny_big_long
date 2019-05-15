@@ -24,37 +24,32 @@ tbl_segment <- tibble(
   )
 
 num_policyholders <- 50e3
-num_policyholders <- 50
 tbl_policyholder <- tbl_segment %>% 
   gm_policyholders_create(num_policyholders)
-
-tbl_round <- tbl_policyholder %>% 
-  gm_rounds_create(10)
 
 tbl_player <- gm_dummy_players(1)  %>% 
   mutate(name = 'Mona Polly')
 
 tbl_player_experience <- gm_player_experience_create(tbl_player, tbl_segment)
 
-tbl_round <- tbl_round %>% 
-  gm_rounds_initialize(tbl_player_experience)
+tbl_policyholder_experience <- tbl_policyholder %>% 
+  gm_policyholder_experience_create(10)
+
+# tbl_policyholder_experience <- tbl_policyholder_experience %>% 
+#   gm_rounds_initialize(tbl_player_experience)
 
 db_con <- dbConnect(SQLite(), 'big_long.sqlite')
 
-dbExecute(db_con, "DELETE FROM tbl_segment")
-dbExecute(db_con, "DELETE FROM tbl_policyholder")
-dbExecute(db_con, "DELETE FROM tbl_round")
+# dbExecute(db_con, "DELETE FROM tbl_segment")
+# dbExecute(db_con, "DELETE FROM tbl_policyholder")
+# dbExecute(db_con, "DELETE FROM tbl_policyholder_experience")
 dbExecute(db_con, "DELETE FROM tbl_player")
 dbExecute(db_con, "DELETE FROM tbl_player_experience")
 
-dbWriteTable(db_con, 'tbl_segment', tbl_segment, append = TRUE)
-dbWriteTable(db_con, 'tbl_policyholder', tbl_policyholder, append = TRUE)
-dbWriteTable(db_con, 'tbl_round', tbl_round, append = TRUE)
+# dbWriteTable(db_con, 'tbl_segment', tbl_segment, append = TRUE)
+# dbWriteTable(db_con, 'tbl_policyholder', tbl_policyholder, append = TRUE)
+# dbWriteTable(db_con, 'tbl_policyholder_experience', tbl_policyholder_experience, append = TRUE)
 dbWriteTable(db_con, 'tbl_player', tbl_player, append = TRUE)
 dbWriteTable(db_con, 'tbl_player_experience', tbl_player_experience, append = TRUE)
 
 dbDisconnect(db_con)
-
-mojo <- gm_rounds_update(tbl_round, tbl_player_experience)
-
-tbl_player_xp_update <- gm_player_experience_update(tbl_player_experience, tbl_round)

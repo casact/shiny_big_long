@@ -3,12 +3,32 @@ library(shinydashboard)
 library(DBI)
 library(RSQLite)
 
-source('ui_team_setup.R')
+source('ui_player_setup.R')
 source('ui_profit_loss.R')
 source('ui_rate_change.R')
+source('ui_segments.R')
 source('ui_admin.R')
 
-# source('db_setup.R')
+fetch_db_column <- function(db_con, tbl_name, col_name) {
+  
+  if (dbIsValid(db_con)) {
+    tbl_in <- dbReadTable(db_con, tbl_name)
+    tbl_in[[col_name]]
+  } else {
+    NULL
+  }
+  
+}
+
+fetch_db_table <- function(db_con, tbl_name) {
+  
+  if (dbIsValid(db_con)) {
+    dbReadTable(db_con, tbl_name)
+  } else {
+    NULL
+  }
+  
+}
 
 ui <- dashboardPage(
   
@@ -16,18 +36,20 @@ ui <- dashboardPage(
   , dashboardSidebar(
     
     sidebarMenu(
-        mnu_team_setup
+        mnu_player_setup
       , mnu_profit_loss
       , mnu_rate_change
+      , mnu_segments
       , mnu_admin
     )
     
   )
   , dashboardBody(
     tabItems(
-        tab_team_setup
+        tab_player_setup
       , tab_profit_loss
       , tab_rate_change
+      , tab_segments
       , tab_admin
     )
   )
@@ -35,10 +57,21 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  eval(expr_team_setup)
+  db_con(dbConnect(SQLite(), 'big_long.sqlite'))
+  
+  observe({
+    
+    segment_names(fetch_db_column(db_con(), 'tbl_segment', 'name'))
+    player_names(fetch_db_column(db_con(), 'tbl_player', 'name'))
+    tbl_segment(fetch_db_table(db_con(), 'tbl_segment'))
+  
+  })
+  
+  eval(expr_player_setup)
   eval(expr_profit_loss)
   eval(expr_rate_change)
   eval(expr_admin)
+  eval(expr_segments)
   
 }
 
