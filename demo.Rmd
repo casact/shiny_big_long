@@ -8,17 +8,32 @@ This package will assist in the simulation of insurance pricing and the renewal 
 ```{r }
 library(tidyverse)
 
-source('game.R')
+source('package/game.R')
 ```
 
 We start by creating a set of customer segments. Each segment will define the expected comparison/lapse propensity and the frequency and severity of claims.
 
 ```{r }
 num_rounds <- 10
-num_segments <- 4
 
 set.seed(1234)
-tbl_segment <- gm_segments_create(num_segments)
+tbl_segment <- tibble(
+    name = LETTERS[1:4]
+  , compare_alpha = c(1.01, 1.01, 15, 15)
+  , compare_beta = c(15, 15, 1.01, 1.01)
+  , compare_trend = c(0, 1, 0, -1)
+  , freq_shape = 2
+  , freq_scale = 1
+  , freq_trend = c(-.01, .01, -.01, .01)
+  , sev_shape = 2
+  , sev_scale = 5e3
+  , sev_trend = 0.02
+  ) %>% 
+  mutate(
+    expected_freq = freq_shape * freq_scale
+    , expected_severity = sev_shape * sev_scale
+    , expected_cost = expected_freq * expected_severity
+  )
 ```
 
 ```{r echo = FALSE}
@@ -29,7 +44,7 @@ tbl_segment %>%
 We use a fixed universe of policyholders who are required to purchase insurance througout the simulation. No policyholders enter or leave the universe. Each policyholder has their own set of parameters for comparison, frequency and severity. Those parameters remain fixed throughout the simulation.
 
 ```{r }
-num_policyholders <- 5e3
+num_policyholders <- 50e3
 
 tbl_policyholder <- tbl_segment %>% 
   gm_policyholders_create(num_policyholders)
@@ -37,25 +52,29 @@ tbl_policyholder <- tbl_segment %>%
 
 ```{r }
 tbl_policyholder %>% 
-  ggplot(aes(compare, fill = segment)) +
+  ggplot(aes(compare, fill = segment_name)) +
   geom_density() + 
-  facet_wrap(~ segment)
+  facet_wrap(~ segment_name)
 ```
 
 ```{r}
 tbl_policyholder %>% 
-  ggplot(aes(expected_cost, fill = segment)) +
+  ggplot(aes(expected_cost, fill = segment_name)) +
   geom_histogram() + 
   scale_x_log10() +
-  facet_wrap(~ segment)
+  facet_wrap(~ segment_name)
 ```
 
 ## Players
 
-Each player represents an insurance company.
+Each player represents an insurance company. In a live setting, we will start the game with a single player. This may be thought of as a monopolistic fund. After some initial time period, the market is open to competition and other players join.
 
 ```{r }
-tbl_player <- gm_dummy_players()
+tbl_player <- gm_dummy_players(1)  %>% 
+  mutate(
+    name = 'Mona Pauley'
+    , default_rate_change = 0
+  )
 ```
 
 ```{r echo = FALSE}
@@ -80,7 +99,12 @@ $$\Delta=(1-\alpha)*\frac{L}{P}=2.5\%$$
 
 ```{r }
 tbl_player_experience <- tbl_player %>% 
-  gm_player_experience_create(tbl_segment, num_rounds)
+  gm_player_experience_create(tbl_segment)
+```
+
+```{r echo = FALSE}
+tbl_player_experience %>% 
+  knitr::kable()
 ```
 
 In a live setting, players are free to apply whichever rate changes they wish. They will be provided with actuarial summaries of portfolio characteristics.
@@ -96,18 +120,17 @@ The game is structured as a set of rounds, each of which is analogous to a polic
 For round 1, policyholders will bind with whichever player is cheapest. At the opening of the game, all policies are new.
 
 ```{r }
-tbl_round <- tbl_policyholder %>% 
-  gm_rounds_create(tbl_player_experience, num_rounds) %>% 
-  gm_rounds_update(tbl_player_experience)
+tbl_policyholder_experience <- tbl_policyholder %>% 
+  gm_policyholder_experience_create(tbl_player_experience, 10)
 ```
 
 ```{r eval=FALSE}
-tbl_round %>% 
+tbl_policyholder_experience %>% 
   ggplot(aes(compare, compared)) + 
-  geom_jitter(width = 0) +
-  facet_wrap(~ round)
+  geom_hex() +
+  facet_wrap(~ round_num)
 
-tbl_round %>% 
+tbl_policyholder_experience %>% 
   filter(round == 1) %>% 
   group_by(written_by) %>% 
   summarise(
@@ -116,13 +139,13 @@ tbl_round %>%
   ggplot(aes(written_by, expected_cost)) + 
   geom_bar(stat = 'identity')
 
-# tbl_round %>% 
+# tbl_policyholder_experience %>% 
 #   gm_rounds_summarise() %>% 
 #   filter(round == 1) %>% 
 #   ggplot(aes(written_by, total_income, fill = segment)) + 
 #   geom_bar(stat = 'identity', position = 'dodge')
 
-tbl_round %>% 
+tbl_policyholder_experience %>% 
   filter(round == 1) %>% 
   group_by(written_by) %>% 
   summarise(
@@ -131,7 +154,7 @@ tbl_round %>%
   ggplot(aes(written_by, total_income)) + 
   geom_bar(stat = 'identity')
 
-tbl_round %>% 
+tbl_policyholder_experience %>% 
   filter(round == 1) %>% 
   group_by(segment) %>% 
   summarise(
@@ -145,14 +168,14 @@ tbl_round %>%
 
 ```{r}
 tbl_player_experience <- tbl_player_experience %>% 
-  gm_player_experience_update(tbl_round)
+  gm_player_experience_update(tbl_policyholder_experience)
 
-tbl_round <- tbl_round %>% 
+tbl_policyholder_experience <- tbl_policyholder_experience %>% 
   gm_rounds_update(tbl_player_experience)
 ```
 
 ```{r}
-tbl_round %>% 
+tbl_policyholder_experience %>% 
   filter(round <= 2) %>% 
   group_by(written_by) %>% 
   summarise(
@@ -166,14 +189,14 @@ tbl_round %>%
 
 ```{r}
 tbl_player_experience <- tbl_player_experience %>% 
-  gm_player_experience_update(tbl_round)
+  gm_player_experience_update(tbl_policyholder_experience)
 
-tbl_round <- tbl_round %>% 
+tbl_policyholder_experience <- tbl_policyholder_experience %>% 
   gm_rounds_update(tbl_player_experience)
 ```
 
 ```{r}
-tbl_round %>% 
+tbl_policyholder_experience %>% 
   filter(round <= 3) %>% 
   group_by(written_by, round) %>% 
   summarise(
