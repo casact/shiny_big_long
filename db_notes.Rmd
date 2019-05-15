@@ -135,3 +135,44 @@ dbDisconnect(db_con)
 ```
 
 Fcuk. OK, so integrity constraints are not respected. This is a problem with the players' names. We can address that on the fly. The admin will not start the game until players have unique names. If there are conflicts, we will have to resolve them before the game can commence.
+
+## More stuff
+
+```{r}
+db_con <- dbConnect(SQLite(), db_source) 
+result <- dbSendQuery(db_con, "UPDATE tbl_segment SET compare_alpha = 3 WHERE name = ?")
+dbBind(result, list("A"))
+dbFetch(result)
+dbReadTable(db_con, 'tbl_segment')
+dbDisconnect(db_con)
+```
+
+```{r}
+db_con <- dbConnect(SQLite(), db_source) 
+str_sql <- sqlInterpolate(
+    db_con
+  , "UPDATE tbl_segment SET compare_alpha = 8 WHERE name = ?segment_name"
+  , segment_name = "A"
+  )
+str_sql
+dbExecute(db_con, str_sql)
+dbReadTable(db_con, 'tbl_segment')
+dbDisconnect(db_con)
+```
+
+```{r}
+db_con <- dbConnect(SQLite(), db_source) 
+seg_name <- 'A'
+compare_alpha <- 3.1
+str_sql <- sqlInterpolate(
+    db_con
+  , "UPDATE tbl_segment SET compare_alpha = ?compare_alpha WHERE name = ?segment_name"
+  , segment_name = seg_name
+  , compare_alpha = compare_alpha
+  )
+str_sql
+dbExecute(db_con, str_sql)
+dbReadTable(db_con, 'tbl_segment')
+dbDisconnect(db_con)
+```
+
