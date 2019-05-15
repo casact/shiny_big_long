@@ -67,10 +67,12 @@ CREATE TABLE tbl_player_experience (
     player_name TEXT NOT NULL
   , segment_name TEXT NOT NULL
   , round_num INTEGER NOT NULL
+  , prior_offer_premium REAL
   , historical_cost REAL 
   , historical_premium REAL 
   , indicated_pure_premium REAL
   , indicated_change REAL
+  , default_rate_change REAL
   , rate_change REAL
   , offer_premium REAL NOT NULL
   , PRIMARY KEY (player_name, segment_name, round_num)
