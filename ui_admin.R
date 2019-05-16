@@ -29,8 +29,8 @@ tab_admin <- tabItem(
         # Set up the game before it begins
       , conditionalPanel(
             condition = paste0("output.game_state == 'before'")
-          , numericInput("num_rounds", "Number of rounds: ", 10, min = 5, max = 20, step = 1)
-          , textOutput('txt_num_rounds')
+          # , numericInput("num_rounds", "Number of rounds: ", 10, min = 5, max = 20, step = 1)
+          # , textOutput('txt_num_rounds')
           , actionButton("btn_start_game", 'Start game')
         )
 
