@@ -53,24 +53,91 @@ gm_policyholders_create <- function(tbl_segment, num_policyholders) {
       , frequency = pmap(list(n = policyholders, shape = freq_shape, scale = freq_scale), rgamma)
       , severity = pmap(list(n = policyholders, shape = sev_shape, scale = sev_scale), rgamma)
     ) %>% 
-    select(segment, expected_cost, compare, frequency, severity) %>% 
+    select(segment_name = name, expected_cost, compare, frequency, severity) %>% 
     unnest() %>% 
     mutate(
         id = seq_len(nrow(.))
       , expected_cost = frequency * severity
     ) %>% 
     select(
-      id, segment, everything()
+      id, segment_name, everything()
     )
   
 }
 
-gm_rounds_create <- function(tbl_policyholder, tbl_player_experience, num_rounds) {
+which_index <- function(x, search_val) {
+  which(x == search_val)
+}
+
+#' gm_updated_bound_market
+#' 
+#' 
+gm_updated_bound_market <- function(tbl_policyholder_experience, tbl_player_experience, which_round) {
+  
+  if (which_round == 1) {
+    tbl_updated_pol_exp <- tbl_policyholder_experience %>% 
+      filter(round_num == 1)
+  } else {
+    tbl_updated_pol_exp <- tbl_policyholder_experience %>% 
+      filter(round_num == which_round - 1) %>%
+      mutate(
+        round_num = round_num + 1
+      )
+  }
+  
+  tbl_offer_premiums <- tbl_player_experience %>% 
+    gm_get_offer_premiums(which_round)
+  
+  tbl_offer_premiums <- tbl_updated_pol_exp %>% 
+    mutate(
+      prior_market = current_market
+      , prior_premium = current_premium) %>% 
+    inner_join(tbl_offer_premiums, by = 'segment_name') %>% 
+    mutate(
+      ref_point = ifelse(
+        round_num == 1
+        , map_dbl(market_premiums, median)
+        , prior_premium
+      )
+      , offer_weights = pmap(
+        list(market_premiums, ref_point = ref_point)
+        , compare_weights
+      )
+      , bestish_market = pmap_chr(
+        list(markets, offer_weights, replace = FALSE, size = 1)
+        , sample
+      )
+      , bestish_index = map2_int(markets, bestish_market, which_index)
+      , bestish_premium = map2_dbl(
+        market_premiums
+        , bestish_index
+        , pluck
+      )      
+      , current_market = ifelse(
+        compared == 1
+        , bestish_market
+        , current_market
+      )
+      , current_premium = ifelse(
+        compared == 1
+        , bestish_premium
+        , current_premium
+      )
+      , income = current_premium - observed_cost
+    ) %>% 
+    select(-market_premiums, -markets, -ref_point, -offer_weights, -bestish_market, -bestish_index, -bestish_premium)
+  
+}
+
+#' gm_policyholder_experience_create
+#' 
+#' 
+gm_policyholder_experience_create <- function(tbl_policyholder, num_rounds) {
 
   tbl_policyholder %>% 
     rename(policyholder_id = id) %>% 
     mutate(
-        round = map(num_rounds, seq_len)
+      round_num = map(num_rounds, seq_len)
     ) %>%
     unnest() %>% 
     mutate(
@@ -78,50 +145,54 @@ gm_rounds_create <- function(tbl_policyholder, tbl_player_experience, num_rounds
       , observed_dollars = pmap(list(n = observed_claims, rate = 1 / severity), rexp)
       , observed_cost = map_dbl(observed_dollars, sum)
       , compared = ifelse(
-            round == 1
+            round_num == 1
           , 1
           , rbinom(nrow(.), 1, compare)
         )
     ) %>% 
     select(
-      -frequency, -severity
+      -frequency, -severity, -observed_dollars
     ) %>% 
     mutate(
-        written_by = NA_integer_
-      , income = NA_real_
-      , written_premium = NA_real_
-    )
-  
+        prior_market = NA_character_
+        , prior_premium = NA_real_
+        , current_market = NA_character_
+        , current_premium = NA_real_
+        , income = NA_real_
+    ) %>% 
+    arrange(policyholder_id, round_num)
 }
 
-max_round <- function(tbl_round) {
+#' gm_policyholder_experience_update
+#' 
+#' @description 
+#' 
+gm_policyholder_experience_update <- function(tbl_policyholder_experience, tbl_player_experience) {
   
-  # Check to see if any of the rounds have been written
-  mojo <- !is.na(tbl_round$written_by)
+  mojo <- !is.na(tbl_policyholder_experience$current_market)
   
   if (sum(mojo)) {
-    tbl_round$round[mojo] %>% max()
+    which_round <- tbl_policyholder_experience$round_num[mojo] %>% max() + 1
   } else {
-    0
+    which_round <- 1
   }
+
+  tbl_update <- tbl_policyholder_experience %>% 
+    gm_updated_bound_market(tbl_player_experience, which_round)
+
+  tbl_policyholder_experience <- tbl_policyholder_experience %>% 
+    filter(
+      round_num != which_round
+    ) %>% 
+    bind_rows(tbl_update)
+  
+  tbl_policyholder_experience
   
 }
 
 #' compare_weights
 #'
-#' 
-#'
-#'
 compare_weights <- function(points, ref_point, balk = FALSE, ballast = .01, balk_high = TRUE) {
-  
-  # DEV
-  # points <- 1:5
-  # ref_point <- 3.5
-  # balk <- TRUE
-  # ballast <- 0.01
-  # End DEV
-  
-  # if (is.list(points)) points <- unlist(points)
   
   the_weights <- -(points - ref_point)
   height <- min(the_weights)
@@ -134,88 +205,17 @@ compare_weights <- function(points, ref_point, balk = FALSE, ballast = .01, balk
   the_weights
 }
 
-#' gm_rounds_update
+#' gm_dummy_players
 #' 
-#' @description 
 #' 
-gm_rounds_update <- function(tbl_round, tbl_player_experience, max_write_pct = 0.25) {
-  
-  # We increment the round counter by one because the player experience table will be updated first
-  which_round <- max_round(tbl_round) + 1
-  
-  tbl_renewal_rates <- tbl_player_experience %>% 
-    filter(round == which_round) %>% 
-    select(player_id, segment, offer_premium) %>% 
-    nest(player_id, offer_premium, .key = 'player_id') %>%
-    mutate(
-        market_premium = map(player_id, 'offer_premium') %>% map(unlist)
-      , player_id = map(player_id, 'player_id')
-    )
-
-  tbl_round_update <- tbl_round %>% 
-    arrange(policyholder_id, round) %>% 
-    mutate(
-      written_by = ifelse(
-          is.na(written_by)
-        , dplyr::lag(written_by)
-        , written_by
-      )
-      , expiring_premium = dplyr::lag(written_premium)
-    ) %>% 
-    filter(round == which_round) %>% 
-    inner_join(tbl_renewal_rates, by = 'segment') %>% 
-    mutate(
-        expiring_premium = ifelse(
-            round == 1
-          , map_dbl(market_premium, median)
-          , expiring_premium
-        )
-      , compare_weights = pmap(
-            list(market_premium, ref_point = expiring_premium)
-          , compare_weights
-        )
-      , bestish_offer = pmap_int(
-          list(player_id, compare_weights, replace = FALSE, size = 1)
-          , sample
-      )
-      , written_by = ifelse(
-          compared == 1
-        , bestish_offer
-        , written_by
-      )
-    ) %>% 
-    select(-expiring_premium, -compare_weights, -market_premium, -player_id, -bestish_offer)
-  
-  tbl_round <- tbl_round %>% 
-    filter(
-      round != which_round
-    ) %>% 
-    bind_rows(tbl_round_update)
-  
-  tbl_round <- tbl_round %>% 
-    left_join(
-      tbl_player_experience %>% 
-        select(player_id, segment, round, offer_premium)
-      , by = c('written_by' = 'player_id', 'segment', 'round')
-    ) %>% 
-    mutate(
-        written_premium = offer_premium
-      , income = written_premium - observed_cost
-    ) %>% 
-    select(-offer_premium)
-  
-  tbl_round
-  
-}
-
 gm_dummy_players <- function(num_players = 10) {
   tibble(
-      id = seq_len(num_players)
-    , name = randomNames::randomNames(
+      name = randomNames::randomNames(
           num_players
         , which.names = 'first'
       )
-    , startup = runif(num_players, -.05, .05)
+    , bot = TRUE
+    , default_rate_change = runif(num_players, -.05, .05)
     , hist_include = 1:5 %>% sample(num_players, replace = TRUE)
     , attenuation = 0.5
     , cap_increase = .05
@@ -227,41 +227,24 @@ gm_dummy_players <- function(num_players = 10) {
 #' 
 #' @description 
 #' 
-gm_player_experience_create <- function(tbl_player, tbl_segment, num_rounds = 10) {
+gm_player_experience_create <- function(tbl_player, tbl_segment) {
   
   tbl_player %>% 
-    rename(player_id = id) %>% 
+    select(player_name = name, default_rate_change) %>% 
     crossing(
-      tbl_segment %>% select(segment, offer_premium = expected_cost)
+      tbl_segment %>% select(segment_name = name, expected_cost)
     ) %>% 
     mutate(
-      offer_premium = offer_premium * (1 + startup)
-    ) %>% 
-    select(-startup) %>% 
-    crossing(
-      round = seq_len(num_rounds) 
-    ) %>% 
-    mutate(
-        offer_premium = ifelse(
-            round == 1
-          , offer_premium
-          , NA_real_
-        )
-      , attenuation = ifelse(
-            round == num_rounds
-          , NA_real_
-          , attenuation
-        )
-      , hist_include = ifelse(
-            round == num_rounds
-          , NA_real_
-          , hist_include
-        )
+      round_num = 1
+      , prior_offer_premium = expected_cost 
       , historical_cost = NA_real_
       , historical_premium = NA_real_
       , indicated_change = NA_real_
-      , rate_change = NA_real_
-    )
+      , rate_change = default_rate_change
+      , offer_premium = prior_offer_premium * (1 + rate_change) 
+    ) %>% 
+    select(-expected_cost) %>% 
+    select(player_name, segment_name, round_num, everything()) 
   
 }
 
@@ -269,52 +252,84 @@ gm_player_experience_create <- function(tbl_player, tbl_segment, num_rounds = 10
 #' 
 #' @details I'm faking this for the moment and ignoring the player preferences about how much history to include.
 #' 
-gm_player_experience_update <- function(tbl_player_experience, tbl_round){
+gm_player_experience_update <- function(tbl_player_experience, tbl_policyholder_experience){
   
-  round_to_update <- max_round(tbl_round) + 1
+  round_to_update <- tbl_player_experience$round_num %>% max() + 1
   
-  tbl_round_summary <- tbl_round %>% 
-    filter(round < round_to_update) %>% # Need to filter because we pre-fill the observed_cost
-    group_by(written_by, segment) %>% 
+  tbl_round_summary <- tbl_policyholder_experience %>% 
+    filter(round_num < round_to_update) %>% # Need to filter because we pre-fill the observed_cost
+    group_by(current_market, segment_name) %>% 
     summarise(
-          observed_cost_2 = sum(observed_cost)
-        , premium_2 = sum(written_premium)
+        observed_cost_2 = sum(observed_cost, na.rm = TRUE)
+      , premium_2 = sum(current_premium, na.rm = TRUE)
     ) %>%
-    ungroup() %>% 
-    mutate(
-      indicated_change_2 = observed_cost_2 / premium_2 - 1
-    )
+    ungroup()
   
   tbl_player_experience_update <- tbl_player_experience %>%
-    filter(round == round_to_update - 1) %>% 
-    left_join(tbl_round_summary, by = c('player_id' = 'written_by', 'segment')) %>% 
+    filter(round_num == round_to_update - 1) %>% 
+    left_join(tbl_round_summary, by = c('player_name' = 'current_market', 'segment_name')) %>% 
     mutate(
         historical_cost = observed_cost_2
       , historical_premium = premium_2
-      , indicated_change = ifelse(
-            is.na(indicated_change_2)
-          , 0
-          , indicated_change_2
-        )
-      , rate_change = indicated_change
+      , indicated_change = historical_cost / historical_premium - 1
+      , round_num = round_num + 1
+      , prior_offer_premium = offer_premium
+      , rate_change = NA_real_
+      , offer_premium = NA_real_
+    ) %>% 
+    select(-contains('_2'))
+
+  tbl_player_experience <- tbl_player_experience %>% 
+    filter(
+      round_num != round_to_update
+    ) %>% 
+    bind_rows(tbl_player_experience_update)
+  
+}
+
+gm_player_experience_update_bots <- function(tbl_player_experience, tbl_player) {
+
+  original_cols <- colnames(tbl_player_experience)
+  
+  tbl_player_experience <- tbl_player_experience %>% 
+    left_join(tbl_player %>% filter(bot) %>% select(-default_rate_change), by = c(player_name = 'name'))
+  
+  tbl_to_update <- tbl_player_experience %>% 
+    filter(bot, is.na(offer_premium)) %>% 
+    mutate(
+      rate_change = indicated_change
       , rate_change = (1 - attenuation) * rate_change
       , rate_change = pmax(rate_change, cap_decrease)
       , rate_change = pmin(rate_change, cap_increase)
-    ) %>% 
-    select(-contains('_2'))
+      , offer_premium = prior_offer_premium * (1 + rate_change)
+    )
   
-  tbl_player_experience <- tbl_player_experience %>% 
-    filter(
-      round != round_to_update - 1
-    ) %>% 
-    bind_rows(tbl_player_experience_update) %>% 
-    arrange(player_id, segment, round) %>% 
+  tbl_all_good <- tbl_player_experience  %>% 
+    filter((!bot | !is.na(offer_premium))) 
+  
+  tbl_player_experience <- bind_rows(
+    tbl_to_update
+    , tbl_all_good
+  )
+  
+  tbl_player_experience <- tbl_player_experience[, original_cols]
+}
+
+#' gm_get_offer_premium
+#' 
+gm_get_offer_premiums <- function(tbl_player_experience, which_round) {
+  
+  # This table will take the player experience for the round under consideration and restructure it so that
+  # we have one row for each segment. The market premiums and player names will have 
+  # vectors for each segment.
+  
+  tbl_player_experience %>% 
+    filter(round_num == which_round) %>% 
+    select(segment_name, player_name, offer_premium) %>% 
+    nest(player_name, offer_premium, .key = 'mojo') %>%
     mutate(
-      offer_premium = ifelse(
-            round == round_to_update
-          , dplyr::lag(offer_premium) * (1 + dplyr::lag(rate_change))
-          , offer_premium
-        )
-    ) 
-  
+      market_premiums = map(mojo, 'offer_premium') %>% map(unlist)
+      , markets = map(mojo, 'player_name')
+    ) %>% 
+    select(-mojo)
 }
