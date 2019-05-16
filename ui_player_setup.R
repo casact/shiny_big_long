@@ -55,10 +55,8 @@ expr_player_setup <- quote({
       return()
     }
 
-    db_con <- dbConnect(SQLite(), sqlite_filename)
-    
     dbWriteTable(
-        db_con
+        db_con()
       , 'tbl_player'
       , tibble(
           name = input$txt_player_name
@@ -66,8 +64,6 @@ expr_player_setup <- quote({
           )
       , append = TRUE)
 
-    dbDisconnect(db_con)
-    
     num_players(num_players() + 1)
     
     player_name(input$txt_player_name)
