@@ -23,32 +23,16 @@ tbl_segment <- tibble(
     , expected_cost = expected_freq * expected_severity
   )
 
-num_policyholders <- 50e3
-tbl_policyholder <- tbl_segment %>% 
-  gm_policyholders_create(num_policyholders)
-
 tbl_bot_player <- gm_dummy_players(1)  %>%
-  mutate(name = 'Mona Polly')
+  mutate(name = 'Mona Pauley')
 
 tbl_player_experience <- gm_player_experience_create(tbl_bot_player, tbl_segment)
 
-tbl_policyholder_experience <- tbl_policyholder %>% 
-  gm_policyholder_experience_create(tbl_player_experience, 10)
-
-# tbl_policyholder_experience <- tbl_policyholder_experience %>% 
-#   gm_rounds_initialize(tbl_player_experience)
-
 db_con <- dbConnect(SQLite(), 'big_long.sqlite')
 
-# dbExecute(db_con, "DELETE FROM tbl_segment")
-# dbExecute(db_con, "DELETE FROM tbl_policyholder")
-# dbExecute(db_con, "DELETE FROM tbl_policyholder_experience")
 dbExecute(db_con, "DELETE FROM tbl_player")
 dbExecute(db_con, "DELETE FROM tbl_player_experience")
 
-# dbWriteTable(db_con, 'tbl_segment', tbl_segment, append = TRUE)
-# dbWriteTable(db_con, 'tbl_policyholder', tbl_policyholder, append = TRUE)
-# dbWriteTable(db_con, 'tbl_policyholder_experience', tbl_policyholder_experience, append = TRUE)
 dbWriteTable(db_con, 'tbl_player', tbl_bot_player, append = TRUE)
 dbWriteTable(db_con, 'tbl_player_experience', tbl_player_experience, append = TRUE)
 
