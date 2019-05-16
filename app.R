@@ -67,6 +67,10 @@ server <- function(input, output, session) {
     player_names(fetch_db_column(db_con(), 'tbl_player', 'name'))
     # tbl_segment(fetch_db_table(db_con(), 'tbl_segment'))
     num_players(fetch_db_column(db_con(), 'tbl_player', 'name') %>% length())
+    current_round(
+      fetch_db_column(db_con(), 'tbl_player_experience', 'round_num') 
+        %>% max()
+    )
     
   })
   

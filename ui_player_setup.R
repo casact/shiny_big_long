@@ -10,6 +10,7 @@ mnu_player_setup <- menuItem("Player setup", tabName = "tab_player_setup")
 tab_player_setup <- tabItem(
     "tab_player_setup"
   , textOutput("txt_num_players")
+  , textOutput("txt_current_round")
   , conditionalPanel(
         condition = paste0("output.player_created == false")
         , fluidRow(
@@ -35,6 +36,11 @@ expr_player_setup <- quote({
   output$player_created <- reactive({
     player_created()
   })
+  
+  output$txt_current_round <- renderText({
+    paste0("It is currently round: ", current_round())
+  })
+  
   
   outputOptions(output, "player_created", suspendWhenHidden = FALSE)
   
