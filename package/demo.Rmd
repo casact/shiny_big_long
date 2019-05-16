@@ -14,8 +14,6 @@ source('package/game.R')
 We start by creating a set of customer segments. Each segment will define the expected comparison/lapse propensity and the frequency and severity of claims.
 
 ```{r }
-num_rounds <- 10
-
 set.seed(1234)
 tbl_segment <- tibble(
     name = LETTERS[1:4]
@@ -120,58 +118,23 @@ The game is structured as a set of rounds, each of which is analogous to a polic
 For round 1, policyholders will bind with whichever player is cheapest. At the opening of the game, all policies are new.
 
 ```{r }
+num_rounds <- 10
+
 tbl_policyholder_experience <- tbl_policyholder %>% 
-  gm_policyholder_experience_create(tbl_player_experience, 10)
+  gm_policyholder_experience_create(num_rounds) %>% 
+  gm_policyholder_experience_update(tbl_player_experience)
 ```
 
-```{r eval=FALSE}
-tbl_policyholder_experience %>% 
-  ggplot(aes(compare, compared)) + 
-  geom_hex() +
-  facet_wrap(~ round_num)
-
-tbl_policyholder_experience %>% 
-  filter(round == 1) %>% 
-  group_by(written_by) %>% 
-  summarise(
-    expected_cost = sum(expected_cost)
-  ) %>% 
-  ggplot(aes(written_by, expected_cost)) + 
-  geom_bar(stat = 'identity')
-
-# tbl_policyholder_experience %>% 
-#   gm_rounds_summarise() %>% 
-#   filter(round == 1) %>% 
-#   ggplot(aes(written_by, total_income, fill = segment)) + 
-#   geom_bar(stat = 'identity', position = 'dodge')
-
-tbl_policyholder_experience %>% 
-  filter(round == 1) %>% 
-  group_by(written_by) %>% 
-  summarise(
-    total_income = sum(income)
-  ) %>% 
-  ggplot(aes(written_by, total_income)) + 
-  geom_bar(stat = 'identity')
-
-tbl_policyholder_experience %>% 
-  filter(round == 1) %>% 
-  group_by(segment) %>% 
-  summarise(
-    total_income = sum(income)
-  ) %>% 
-  ggplot(aes(segment, total_income)) + 
-  geom_bar(stat = 'identity')
-```
 
 ### Round 2
 
 ```{r}
 tbl_player_experience <- tbl_player_experience %>% 
-  gm_player_experience_update(tbl_policyholder_experience)
+  gm_player_experience_update(tbl_policyholder_experience) %>% 
+  gm_player_experience_update_bots(tbl_player)
 
 tbl_policyholder_experience <- tbl_policyholder_experience %>% 
-  gm_rounds_update(tbl_player_experience)
+  gm_policyholder_experience_update(tbl_player_experience)
 ```
 
 ```{r}
