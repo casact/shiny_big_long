@@ -1,14 +1,9 @@
 #=======================================
 # GLOBAL VALS
 sqlite_filename <- 'big_long.sqlite'
-game_state <- reactiveVal('before')
-is_admin <- reactiveVal(TRUE)
+game_state <- reactiveVal('after')
+is_admin <- reactiveVal(FALSE)
 db_con <- reactiveVal(NULL)
-current_round <- reactiveVal(0)
-
-tbl_policyholders <- reactiveVal(tibble())
-tbl_policyholder_experience <- reactiveVal(tibble())
-tbl_player_experience <- reactiveVal(tibble())
 
 #=======================================
 # UI ITEMS
@@ -29,8 +24,6 @@ tab_admin <- tabItem(
         # Set up the game before it begins
       , conditionalPanel(
             condition = paste0("output.game_state == 'before'")
-          # , numericInput("num_rounds", "Number of rounds: ", 10, min = 5, max = 20, step = 1)
-          # , textOutput('txt_num_rounds')
           , actionButton("btn_start_game", 'Start game')
         )
 
@@ -41,10 +34,11 @@ tab_admin <- tabItem(
           , actionButton("btn_end_game", 'End game')
         )
 
-        # Clear the results so that you can start a new game. (This might not be necessary)
+        # Clear the results so that you can start a new game. This is where we 
+        # establish the policyholder and policyholder_experience tables
       , conditionalPanel(
           condition = "output.game_state == 'after'"
-        , actionButton("btn_clear_results", 'Clear results')
+        , actionButton("btn_clear_results", 'Clear results/prep new game')
       )
   )
 )
@@ -52,6 +46,19 @@ tab_admin <- tabItem(
 #====================================
 # SERVER CODE
 expr_admin <- quote({
+  
+  current_round <- reactivePoll(
+    500
+    , session
+    , checkFunc = db_updated
+    , valueFunc = function() {
+      
+      tbl <- dbReadTable(db_con(), 'tbl_player_experience')
+      tbl$round_num %>% 
+        as.integer() %>% 
+        max()
+    }
+  )
   
   output$game_state <- reactive({
     game_state()
@@ -64,12 +71,6 @@ expr_admin <- quote({
   outputOptions(output, "is_admin", suspendWhenHidden = FALSE)
   outputOptions(output, "game_state", suspendWhenHidden = FALSE)
 
-  output$tbl_players <- renderDataTable(tbl_player)
-  
-  # reactive(
-  #   num_rounds(input$num_rounds)
-  # )
-  
   db_connected <- reactive({
     
     if (is.null(db_con())) {
@@ -111,18 +112,38 @@ expr_admin <- quote({
   })
 
   observeEvent(input$btn_start_game, {
-    # create policyholders
-    # create rounds
-    # gm_rounds_create()
-    tbl_player_experience(fetch_db_table(db_con()), 'tbl_player_experience')
-    current_round(1)
+
+    tmp_player_experience <- tbl_player_experience() %>% 
+      gm_player_experience_update(tbl_policyholder_experience()) %>%
+      gm_player_experience_update_bots(tbl_player())
+    
+    dbWriteTable(db_con(), 'tbl_player_experience', tmp_player_experience, overwrite = TRUE)
+    
+    Sys.sleep(1)
+    
+    tbl_policyholder_experience() %>%
+      gm_policyholder_experience_update(tbl_player_experience()) %>% 
+      tbl_policyholder_experience()
+    
     game_state('during')
+    
   })
 
   observeEvent(input$btn_next_round, {
-    # gm_rounds_update()
-    # db_update_rounds()
-    current_round(current_round() + 1)
+    
+    # We have already updated the player experience
+    tbl_policyholder_experience() %>%
+      gm_policyholder_experience_update(tbl_player_experience()) %>% 
+      tbl_policyholder_experience()
+    
+    tmp_player_experience <- tbl_player_experience() %>% 
+      gm_player_experience_update(tbl_policyholder_experience()) %>%
+      gm_player_experience_update_bots(tbl_player())
+    
+    dbWriteTable(db_con(), 'tbl_player_experience', tmp_player_experience, overwrite = TRUE)
+    
+    Sys.sleep(1)
+    
   })
 
   observeEvent(input$btn_end_game, {
@@ -130,6 +151,46 @@ expr_admin <- quote({
   })
 
   observeEvent(input$btn_clear_results, {
+    
+    dbExecute(db_con(), "DELETE FROM tbl_player")
+    dbExecute(db_con(), "DELETE FROM tbl_player_experience")
+    
+    num_policyholders <- 50
+    burn_in_rounds <- 5
+    num_rounds <- 10
+    
+    tbl_bot_player <- gm_dummy_players(1)  %>%
+      mutate(name = 'Mona Pauley', attenuation = 0)
+    
+    dbWriteTable(db_con(), 'tbl_player', tbl_bot_player, append = TRUE)
+    dbWriteTable(db_con(), 'tbl_player_experience', gm_player_experience_create(tbl_bot_player, tbl_segment), append = TRUE)
+    
+    tbl_policyholder <- tbl_segment %>% 
+      gm_policyholders_create(num_policyholders)
+
+    tmp_policyholder_experience <- tbl_policyholder %>%
+      gm_policyholder_experience_create(num_rounds) %>%
+      gm_policyholder_experience_update(tbl_player_experience())
+
+    tmp_player_experience <- tbl_player_experience()
+    
+    for (i in seq_len(burn_in_rounds - 1)) {
+      
+      tmp_player_experience <- tmp_player_experience %>%
+        gm_player_experience_update(tmp_policyholder_experience) %>%
+        gm_player_experience_update_bots(tbl_player())
+      
+      tmp_policyholder_experience <- tmp_policyholder_experience %>%
+        gm_policyholder_experience_update(tmp_player_experience)
+      
+    }
+
+    dbWriteTable(db_con(), 'tbl_player_experience', tmp_player_experience, overwrite = TRUE)
+    tbl_policyholder_experience(tmp_policyholder_experience)
+    
+    # delay while waiting for the database to recognize the change
+    Sys.sleep(1)
+    
     game_state('before')
   })
   
