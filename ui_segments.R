@@ -1,6 +1,3 @@
-segment_names <- reactiveVal(NULL)
-# tbl_segment <- reactiveVal(tibble())
-
 mnu_segments <- menuItem("Segments", tabName = "tab_segments")
 
 tab_segments <- tabItem(
@@ -10,7 +7,7 @@ tab_segments <- tabItem(
       tableOutput("tbl_segments")
     )
     , fluidRow(
-        selectInput("select_segment", "Select segment", "no segment defined")
+        selectInput("select_segment", "Select segment", "no segment defined", choices = tbl_segment$name)
       , column(4
         , p("The plot below shows the propensity to compare prices in the marketplace")
         , plotOutput("plt_compare")
@@ -28,16 +25,6 @@ tab_segments <- tabItem(
 )
 
 expr_segments <- quote({
-  
-  observe({
-    
-    updateSelectInput(
-      session
-      , "select_segment"
-      , choices = segment_names()
-    )
-    
-  })
   
   tbl_selected_segment <- reactive({
     
