@@ -22,18 +22,3 @@ tbl_segment <- tibble(
     , expected_severity = sev_shape * sev_scale
     , expected_cost = expected_freq * expected_severity
   )
-
-tbl_bot_player <- gm_dummy_players(1)  %>%
-  mutate(name = 'Mona Pauley')
-
-tbl_player_experience <- gm_player_experience_create(tbl_bot_player, tbl_segment)
-
-db_con <- dbConnect(SQLite(), 'big_long.sqlite')
-
-dbExecute(db_con, "DELETE FROM tbl_player")
-dbExecute(db_con, "DELETE FROM tbl_player_experience")
-
-dbWriteTable(db_con, 'tbl_player', tbl_bot_player, append = TRUE)
-dbWriteTable(db_con, 'tbl_player_experience', tbl_player_experience, append = TRUE)
-
-dbDisconnect(db_con)
