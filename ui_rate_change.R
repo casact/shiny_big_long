@@ -8,8 +8,15 @@ tab_rate_change <- tabItem(
  
      "tab_rate_change"
     , textOutput("txt_current_round_rate_change")
-    , uiOutput("rate_changes")
-    , actionButton("btn_update_rates", "Submit rates")
+    , conditionalPanel(
+      condition = "output.game_state != 'during'"
+      , textOutput("You will be able to enter rate changes once the game has begun.")
+    )
+    , conditionalPanel(
+      condition = "output.game_state == 'during'"
+      , uiOutput("rate_changes")
+      , actionButton("btn_update_rates", "Submit rates")
+    )
 
 )
 
