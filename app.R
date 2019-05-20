@@ -12,8 +12,6 @@ source('ui_segments.R')
 source('ui_admin.R')
 source('utility.R')
 
-str_db_filename <- 'big_long.sqlite'
-
 ui <- dashboardPage(
   
   dashboardHeader(title = "The Big Long")
@@ -40,8 +38,8 @@ ui <- dashboardPage(
 )
 
 server <- function(input, output, session) {
-  
-  db_con(dbConnect(SQLite(), sqlite_filename))
+
+  db_con(dbConnect(SQLite(), str_db_filename))
 
   eval(expr_player_setup)
   eval(expr_profit_loss)
