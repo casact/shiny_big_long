@@ -316,7 +316,8 @@ gm_player_experience_update_bots <- function(tbl_player_experience, tbl_player) 
     , tbl_all_good
   ) %>% 
     mutate(
-      offer_premium = prior_offer_premium * (1 + rate_change)
+      rate_change = coalesce(rate_change, 0)
+      , offer_premium = prior_offer_premium * (1 + rate_change)
     )
 
   tbl_player_experience <- tbl_player_experience[, original_cols]
