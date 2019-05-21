@@ -33,9 +33,13 @@ expr_profit_loss <- quote({
   
   output$tbl_profit_loss <- renderDataTable({
     tbl_policyholder_experience() %>% 
-      filter(round_num <= current_round()) %>% 
+      filter(round_num < current_round()) %>% 
       group_by(segment_name, round_num) %>% 
-      summarise(income = sum(income, na.rm = TRUE))
+      summarise(income = sum(income, na.rm = TRUE)
+                ,policies=n()
+                ,freq=sum(loss>0,na.rm=TRUE)
+                ,severity=mean(loss,na.rm=TRUE)
+      )
   })
 
   output$plt_profit_loss <- renderPlot({
