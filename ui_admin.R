@@ -2,7 +2,6 @@
 # GLOBAL VALS
 sqlite_filename <- 'big_long.sqlite'
 game_state <- reactiveVal('after')
-is_admin <- reactiveVal(FALSE)
 db_con <- reactiveVal(NULL)
 
 #=======================================
@@ -46,6 +45,8 @@ tab_admin <- tabItem(
 #====================================
 # SERVER CODE
 expr_admin <- quote({
+  
+  is_admin <- reactiveVal(FALSE)
   
   current_round <- reactivePoll(
     500
