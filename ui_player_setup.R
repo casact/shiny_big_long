@@ -1,4 +1,3 @@
-player_name <- reactiveVal(NA_character_)
 num_players <- reactiveVal(0)
 player_names <- reactiveVal(NULL)
 
@@ -35,6 +34,8 @@ tab_player_setup <- tabItem(
 # SERVER CODE
 expr_player_setup <- quote({
 
+  player_name <- reactiveVal(NA_character_)
+  
   tbl_player <- reactivePoll(
     500
     , session
