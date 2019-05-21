@@ -9,10 +9,10 @@ tbl_segment <- tibble(
     name = LETTERS[1:4]
   , compare_alpha = c(1.01, 1.01, 15, 15)
   , compare_beta = c(15, 15, 1.01, 1.01)
-  , compare_trend = c(0, 1, 0, -1)
+  , compare_trend = c(-.05, -.05, .05, .05)
   , freq_shape = 2
   , freq_scale = 1
-  , freq_trend = c(-.01, .01, -.01, .01)
+  , freq_trend = c(-.2, .4, -.2, .4)
   , sev_shape = 2
   , sev_scale = 5e3
   , sev_trend = 0.02

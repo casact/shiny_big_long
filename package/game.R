@@ -51,13 +51,12 @@ gm_policyholders_create <- function(tbl_segment, num_policyholders) {
     mutate(
         compare = pmap(list(n = policyholders, shape1 = compare_alpha, shape2 = compare_beta), rbeta)
       , frequency = pmap(list(n = policyholders, shape = freq_shape, scale = freq_scale), rgamma)
-      , severity = pmap(list(n = policyholders, shape = sev_shape, scale = sev_scale), rgamma)
     ) %>% 
-    select(segment_name = name, expected_cost, compare, frequency, severity) %>% 
+    select(segment_name = name, expected_cost, compare, frequency, sev_shape, sev_scale, compare_trend, freq_trend, sev_trend) %>% 
     unnest() %>% 
     mutate(
         id = seq_len(nrow(.))
-      , expected_cost = frequency * severity
+      , expected_cost = frequency * sev_shape * sev_scale
     ) %>% 
     select(
       id, segment_name, everything()
@@ -140,9 +139,25 @@ gm_policyholder_experience_create <- function(tbl_policyholder, num_rounds) {
       round_num = map(num_rounds, seq_len)
     ) %>%
     unnest() %>% 
+    group_by(policyholder_id) %>%
+    arrange(round_num, .by_group = TRUE) %>% 
+    mutate(
+      base_sev_scale = head(sev_scale, 1)
+      , base_frequency = head(frequency, 1)
+      , base_compare = head(compare, 1)
+      , sev_scale = base_sev_scale * (1 + sev_trend) ^ (round_num - 1)
+      , frequency = base_frequency + cumsum(freq_trend)
+      , compare = base_compare + cumsum(compare_trend)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+      compare = pmax(compare, .01)
+      , compare = pmin(compare, .98)
+      , frequency = pmin(frequency, .02)
+    ) %>% 
     mutate(
         observed_claims = rpois(nrow(.), frequency)
-      , observed_dollars = pmap(list(n = observed_claims, rate = 1 / severity), rexp)
+      , observed_dollars = pmap(list(n = observed_claims, shape = sev_shape, scale = sev_scale), rgamma)
       , observed_cost = map_dbl(observed_dollars, sum)
       , compared = ifelse(
             round_num == 1
@@ -151,7 +166,7 @@ gm_policyholder_experience_create <- function(tbl_policyholder, num_rounds) {
         )
     ) %>% 
     select(
-      -frequency, -severity, -observed_dollars
+      -frequency, -sev_scale, -sev_shape, -observed_dollars, -compare_trend, freq_trend, sev_trend
     ) %>% 
     mutate(
         prior_market = NA_character_
