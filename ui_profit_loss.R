@@ -31,15 +31,20 @@ tab_profit_loss <- tabItem(
 # SERVER CODE
 expr_profit_loss <- quote({
   
-  output$tbl_profit_loss <- renderDataTable({
     tbl_policyholder_experience() %>% 
       filter(round_num < current_round()) %>% 
       group_by(segment_name, round_num) %>% 
       summarise(income = sum(income, na.rm = TRUE)
                 ,policies=n()
-                ,freq=sum(loss>0,na.rm=TRUE)
-                ,severity=mean(loss,na.rm=TRUE)
-      )
+                ,obs_freq=sum(observed_claims,na.rm=TRUE)/n()
+                ,obs_losses=sum(observed_cost,na.rm=TRUE)
+                ,obs_severity=obs_losses/obs_freq) %>%
+      mutate(income=scales::dollar(income)
+             ,policies=scales::comma(policies)
+             ,obs_freq=scales::percent(obs_freq)
+             ,obs_losses=scales::comma(obs_losses)
+             ,obs_severity=scales::comma(obs_severity))
+      
   })
 
   output$plt_profit_loss <- renderPlot({
