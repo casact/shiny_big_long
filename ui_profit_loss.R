@@ -32,9 +32,9 @@ tab_profit_loss <- tabItem(
 expr_profit_loss <- quote({
   
   output$tbl_profit_loss <- renderDataTable({
-    browser()
+    #browser()
     tbl_policyholder_experience() %>% 
-      filter(round_num == current_round()-1) %>% 
+      filter(round_num == current_round()-1,current_market==player_name()) %>% 
       group_by(segment_name, current_market) %>% 
       summarise(income = sum(income, na.rm = TRUE)
                 ,avg_premium=sum(current_premium)/n()
