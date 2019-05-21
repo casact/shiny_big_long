@@ -31,15 +31,19 @@ tab_profit_loss <- tabItem(
 # SERVER CODE
 expr_profit_loss <- quote({
   
+  output$tbl_profit_loss <- renderDataTable({
+    browser()
     tbl_policyholder_experience() %>% 
-      filter(round_num < current_round()) %>% 
-      group_by(segment_name, round_num) %>% 
+      filter(round_num == current_round()-1) %>% 
+      group_by(segment_name, current_market) %>% 
       summarise(income = sum(income, na.rm = TRUE)
+                ,avg_premium=sum(current_premium)/n()
                 ,policies=n()
                 ,obs_freq=sum(observed_claims,na.rm=TRUE)/n()
                 ,obs_losses=sum(observed_cost,na.rm=TRUE)
-                ,obs_severity=obs_losses/obs_freq) %>%
+                ,obs_severity=obs_losses/sum(observed_claims,na.rm=TRUE)) %>%
       mutate(income=scales::dollar(income)
+             ,avg_premium=scales::comma(avg_premium)
              ,policies=scales::comma(policies)
              ,obs_freq=scales::percent(obs_freq)
              ,obs_losses=scales::comma(obs_losses)
