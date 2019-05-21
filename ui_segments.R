@@ -34,7 +34,7 @@ expr_segments <- quote({
   })
   
   output$tbl_segments <- renderTable({
-    tbl_segment
+    tbl_segment %>% select(compare_trend,expected_freq,freq_trend,expected_severity, sev_trend,expected_cost)
   })
   
   output$plt_compare <- renderPlot({

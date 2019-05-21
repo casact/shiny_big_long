@@ -41,7 +41,7 @@ expr_profit_loss <- quote({
   output$plt_profit_loss <- renderPlot({
     
     tbl_policyholder_experience() %>% 
-      filter(round_num <= current_round()) %>% 
+      filter(round_num < current_round()) %>% 
       ggplot(aes(income)) + 
       geom_histogram() + 
       facet_wrap(~ round_num, scales = 'free_x')
