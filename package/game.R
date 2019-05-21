@@ -153,7 +153,7 @@ gm_policyholder_experience_create <- function(tbl_policyholder, num_rounds) {
     mutate(
       compare = pmax(compare, .01)
       , compare = pmin(compare, .98)
-      , frequency = pmin(frequency, .02)
+      , frequency = pmax(frequency, .02)
     ) %>% 
     mutate(
         observed_claims = rpois(nrow(.), frequency)
