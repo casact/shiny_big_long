@@ -155,9 +155,9 @@ expr_admin <- quote({
     dbExecute(db_con(), "DELETE FROM tbl_player")
     dbExecute(db_con(), "DELETE FROM tbl_player_experience")
     
-    num_policyholders <- 50e3
+    num_policyholders <- 10e3
     burn_in_rounds <- 5
-    num_rounds <- 10
+    num_rounds <- 15
     
     tbl_bot_player <- gm_dummy_players(1)  %>%
       mutate(name = 'Mona Pauley', attenuation = 0)
