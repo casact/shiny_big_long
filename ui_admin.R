@@ -155,7 +155,7 @@ expr_admin <- quote({
     dbExecute(db_con(), "DELETE FROM tbl_player")
     dbExecute(db_con(), "DELETE FROM tbl_player_experience")
     
-    num_policyholders <- 50
+    num_policyholders <- 50e3
     burn_in_rounds <- 5
     num_rounds <- 10
     
