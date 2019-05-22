@@ -13,9 +13,9 @@ tab_profit_loss <- tabItem(
     "tab_profit_loss"
   , conditionalPanel(
       condition = "output.game_state != 'after'"
-      , fluidRow(
-        plotOutput('plt_profit_loss')
-      )
+      # , fluidRow(
+      #   plotOutput('plt_profit_loss')
+      # )
       ,h2("One Year Experience")
       , fluidRow(
         dataTableOutput("tbl_profit_loss")
@@ -91,18 +91,18 @@ expr_profit_loss <- quote({
     })
   output$plt_profit_loss <- renderPlot({
     
-    data<-
-    tbl_policyholder_experience() %>% 
-      filter(round_num < current_round(),current_market==player_name()) %>%
-      group_by(round_num,segment_name)%>%
-      summarise(policies=n()
-             ,obs_loss_cost=sum(observed_cost,na.rm=TRUE)/n())
-     
-    if(nrow(data)>0){
-      ggplot(aes(x=round_num,y=obs_loss_cost)) + 
-      geom_boxplot() + 
-      facet_wrap(~ segment_name, scales = 'free_x')
-    }
+    # data<-
+    # tbl_policyholder_experience() %>% 
+    #   filter(round_num < current_round(),current_market==player_name()) %>%
+    #   group_by(round_num,segment_name)%>%
+    #   summarise(policies=n()
+    #          ,obs_loss_cost=sum(observed_cost,na.rm=TRUE)/n())
+    #  
+    # if(nrow(data)>0){
+    #   ggplot(aes(x=round_num,y=obs_loss_cost)) + 
+    #   geom_boxplot() + 
+    #   facet_wrap(~ segment_name, scales = 'free_x')
+    # }
   })  
 
 })
