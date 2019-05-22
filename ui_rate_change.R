@@ -38,7 +38,7 @@ expr_rate_change <- quote({
   
     lapply(tbl_segment$name, function(x) {
       # textOutput()
-      numericInput(paste0("rate_change_", x), paste0("Rate change ", x), 0, -0.05, 0.05, 0.005)
+      numericInput(paste0("rate_change_", x), paste0("Rate change ", x), 0, -0.25, 0.25, 0.005)
     })
   })
   
