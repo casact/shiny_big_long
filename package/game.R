@@ -74,20 +74,28 @@ which_index <- function(x, search_val) {
 gm_updated_bound_market <- function(tbl_policyholder_experience, tbl_player_experience, which_round) {
   
   if (which_round == 1) {
-    tbl_updated_pol_exp <- tbl_policyholder_experience %>% 
+    tbl_updated_pol_exp <- tbl_policyholder_experience %>%
       filter(round_num == 1)
   } else {
-    tbl_updated_pol_exp <- tbl_policyholder_experience %>% 
+    tbl_updated_pol_exp <- tbl_policyholder_experience %>%
       filter(round_num == which_round - 1) %>%
       mutate(
         round_num = round_num + 1
       )
   }
-  
+
+  tbl_compare <- tbl_policyholder_experience %>% 
+    filter(round_num == which_round) %>% 
+    select(policyholder_id, compared)
+    
+  tbl_cazart <- tbl_updated_pol_exp %>% 
+    select(-compared) %>% 
+    inner_join(tbl_compare, by = 'policyholder_id')
+
   tbl_offer_premiums <- tbl_player_experience %>% 
     gm_get_offer_premiums(which_round)
   
-  tbl_offer_premiums <- tbl_updated_pol_exp %>% 
+  tbl_cazart <- tbl_cazart %>% 
     mutate(
       prior_market = current_market
       , prior_premium = current_premium) %>% 
