@@ -164,8 +164,8 @@ expr_admin <- quote({
     tbl_bot_player <- gm_dummy_players(1)  %>%
       mutate(name = 'Mona Pauley', attenuation = 0)
     
-    dbWriteTable(db_con(), 'tbl_player', tbl_bot_player, append = TRUE)
-    dbWriteTable(db_con(), 'tbl_player_experience', gm_player_experience_create(tbl_bot_player, tbl_segment), append = TRUE)
+    dbWriteTable(db_con(), 'tbl_player', tbl_bot_player, overwrite = TRUE)
+    dbWriteTable(db_con(), 'tbl_player_experience', gm_player_experience_create(tbl_bot_player, tbl_segment), overwrite = TRUE)
     
     tbl_policyholder <- tbl_segment %>% 
       gm_policyholders_create(num_policyholders)
