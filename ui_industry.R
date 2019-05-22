@@ -60,7 +60,7 @@ expr_industry <- quote({
     #' 5 year Experience
     expr=tbl_policyholder_experience() %>% 
       filter(round_num > current_round()-6,!is.na(current_premium)) %>% 
-      group_by(segment_name, current_market) %>% 
+      group_by(segment_name) %>% 
       summarise(income = sum(income, na.rm = TRUE)
                 ,avg_premium=sum(current_premium)/n()
                 ,policies=n()
