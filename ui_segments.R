@@ -35,7 +35,7 @@ expr_segments <- quote({
   
   output$tbl_segments <- renderTable({
     tbl_segment %>% 
-      select(compare_trend,expected_freq,freq_trend,expected_severity, sev_trend,expected_cost) %>%
+      select(segment_name=name,compare_trend,expected_freq,freq_trend,expected_severity, sev_trend,expected_cost) %>%
       mutate(
              compare_trend=scales::percent(compare_trend)
              ,expected_freq=scales::percent(expected_freq)
