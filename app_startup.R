@@ -9,14 +9,14 @@ tbl_segment <- tibble(
     name = LETTERS[1:4]
   , compare_alpha = c(1.01, 1.01, 15, 15)
   , compare_beta = c(15, 15, 1.01, 1.01)
-  , compare_trend = c(-.05, -.05, .05, .05)
-  , freq_shape = 2
+  , compare_trend = c(0, 0, 0, 0)
+  , freq_shape = 1
   , freq_scale = 1
-  , freq_trend = c(-.2, .4, -.2, .4)
+  , freq_trend = c(-.02, .04, -.02, .04)
   , sev_shape = 2
   , sev_scale = 5e3
   , sev_trend = 0.02
-) %>% 
+) %>%
   mutate(
     expected_freq = freq_shape * freq_scale
     , expected_severity = sev_shape * sev_scale

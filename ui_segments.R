@@ -38,7 +38,7 @@ expr_segments <- quote({
       select(segment_name=name,compare_trend,expected_freq,freq_trend,expected_severity, sev_trend,expected_cost) %>%
       mutate(
              compare_trend=scales::percent(compare_trend)
-             ,expected_freq=scales::percent(expected_freq)
+             ,expected_freq=round(expected_freq,2)
              ,freq_trend=scales::percent(freq_trend)
              ,expected_severity=scales::comma(expected_severity)
              ,sev_trend=scales::percent(sev_trend)
