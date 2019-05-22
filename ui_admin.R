@@ -30,6 +30,7 @@ tab_admin <- tabItem(
       , conditionalPanel(
             condition = "output.game_state == 'during'"
           , actionButton("btn_next_round", 'Next round')
+          , dataTableOutput('tbl_player_experience_admin')
           , actionButton("btn_end_game", 'End game')
         )
 
@@ -156,7 +157,7 @@ expr_admin <- quote({
     dbExecute(db_con(), "DELETE FROM tbl_player")
     dbExecute(db_con(), "DELETE FROM tbl_player_experience")
     
-    num_policyholders <- 10e3
+    num_policyholders <- 50e3
     burn_in_rounds <- 5
     num_rounds <- 15
     
@@ -193,6 +194,16 @@ expr_admin <- quote({
     Sys.sleep(1)
     
     game_state('before')
+  })
+  
+  output$tbl_player_experience_admin <- renderDataTable({
+    tbl_policyholder_experience() %>% 
+      filter(round_num <= current_round()) %>% 
+      group_by(current_market, segment_name, round_num) %>% 
+      summarise(
+        policy_count = n()
+        , p = median(compare)
+      )
   })
   
 })
