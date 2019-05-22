@@ -163,7 +163,7 @@ expr_admin <- quote({
     num_rounds <- 15
     
     tbl_bot_player <- gm_dummy_players(1)  %>%
-      mutate(name = 'Mona Pauley', attenuation = 0)
+      mutate(name = 'Mona Pauley', attenuation = 0, default_rate_change=.035)
     
     tmp_player_experience <- tbl_bot_player %>% 
       gm_player_experience_create(tbl_segment)
