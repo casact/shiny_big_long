@@ -43,14 +43,19 @@ expr_industry <- quote({
                 ,policies=n()
                 ,obs_freq=sum(observed_claims,na.rm=TRUE)/n()
                 ,obs_losses=sum(observed_cost,na.rm=TRUE)
-                ,obs_severity=obs_losses/sum(observed_claims,na.rm=TRUE)) %>%
+                ,total_prem=sum(current_premium)
+                ,obs_severity=obs_losses/sum(observed_claims,na.rm=TRUE))%>%
+      mutate(loss_ratio=obs_losses/total_prem
+             ,indication=loss_ratio-1) %>%
       mutate(income=scales::dollar(income)
              ,avg_premium=scales::comma(avg_premium)
              ,policies=scales::comma(policies)
              ,obs_freq=round(obs_freq,2)
              ,obs_losses=scales::comma(obs_losses)
-             ,obs_severity=scales::comma(obs_severity)) %>%
-      select(segment_name,income,policies,avg_premium,obs_freq,obs_losses)
+             ,obs_severity=scales::comma(obs_severity)
+             ,loss_ratio=scales::percent(loss_ratio)
+             ,indication=scales::percent(indication)) %>%
+      select(segment_name,income,policies,avg_premium,loss_ratio,indication)
     
   })
   
@@ -66,14 +71,20 @@ expr_industry <- quote({
                 ,policies=n()
                 ,obs_freq=sum(observed_claims,na.rm=TRUE)/n()
                 ,obs_losses=sum(observed_cost,na.rm=TRUE)
-                ,obs_severity=obs_losses/sum(observed_claims,na.rm=TRUE)) %>%
+                ,total_prem=sum(current_premium)
+                ,obs_severity=obs_losses/sum(observed_claims,na.rm=TRUE))%>%
+      mutate(loss_ratio=obs_losses/total_prem
+             ,indication=loss_ratio-1) %>%
       mutate(income=scales::dollar(income)
              ,avg_premium=scales::comma(avg_premium)
              ,policies=scales::comma(policies)
              ,obs_freq=round(obs_freq,2)
              ,obs_losses=scales::comma(obs_losses)
-             ,obs_severity=scales::comma(obs_severity))%>%
-      select(segment_name,income,policies,avg_premium,obs_freq,obs_losses)    
+             ,obs_severity=scales::comma(obs_severity)
+             ,loss_ratio=scales::percent(loss_ratio)
+             ,indication=scales::percent(indication)) %>%
+      select(segment_name,income,policies,avg_premium,loss_ratio,indication)
+    
   })
   
 })
