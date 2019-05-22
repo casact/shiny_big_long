@@ -146,7 +146,7 @@ gm_policyholder_experience_create <- function(tbl_policyholder, num_rounds) {
       , base_frequency = head(frequency, 1)
       , base_compare = head(compare, 1)
       , sev_scale = base_sev_scale * (1 + sev_trend) ^ (round_num - 1)
-      , frequency = base_frequency + cumsum(freq_trend)
+      , frequency = base_frequency + (1 + freq_trend) ^ (round_num - 1)
       , compare = base_compare + cumsum(compare_trend)
     ) %>% 
     ungroup() %>% 
