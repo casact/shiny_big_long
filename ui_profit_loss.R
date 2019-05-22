@@ -82,10 +82,13 @@ expr_profit_loss <- quote({
   output$plt_profit_loss <- renderPlot({
     
     tbl_policyholder_experience() %>% 
-      filter(round_num < current_round(),current_market==player_name()) %>% 
-      ggplot(aes(income)) + 
-      geom_histogram() + 
-      facet_wrap(~ round_num, scales = 'free_x')
+      filter(round_num < current_round(),current_market==player_name()) %>%
+      group_by(round_num,segment_name)%>%
+      summarise(policies=n()
+             ,obs_loss_cost=sum(observed_cost,na.rm=TRUE)/n()) %>%
+      ggplot(aes(x=round_num,y=obs_loss_cost)) + 
+      geom_boxplot() + 
+      facet_wrap(~ segment_name, scales = 'free_x')
   })  
 
 })
